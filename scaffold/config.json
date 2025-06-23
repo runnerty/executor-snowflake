@@ -1,0 +1,15 @@
+{
+  "executors": [
+    {
+      "id": "snowflake_default",
+      "type": "@runnerty-executor-snowflake",
+      "account": "myaccount.us-east-1",
+      "username": "snowflakeuser",
+      "password": "snowflakepass",
+      "database": "MYDATABASE",
+      "schema": "PUBLIC",
+      "warehouse": "COMPUTE_WH",
+      "role": "PUBLIC"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://raw.githubusercontent.com/runnerty/schemas/master/schemas/3.1/plan.json",
+  "chains": [
+    {
+      "id": "CHAIN_SNOWFLAKE_SSO",
+      "name": "SNOWFLAKE SSO Examples",
+      "defaults_processes": {
+        "notifications": {
+          "on_start": [
+            {
+              "id": "console_default",
+              "message": "🚀 START: @GV(PROCESS_ID) - @GETDATE('YYYY-MM-DD HH:mm:ss')"
+            }
+          ],
+          "on_fail": [
+            {
+              "id": "console_default",
+              "message": "❌ ERROR: @GV(PROCESS_ID) - @GV(PROCESS_EXEC_ERR_OUTPUT)",
+              "mode": "error"
+            }
+          ],
+          "on_end": [
+            {
+              "id": "console_default",
+              "message": "✅ END: @GV(PROCESS_ID) - Rows: @GV(PROCESS_EXEC_DB_COUNTROWS) - @GETDATE('YYYY-MM-DD HH:mm:ss')"
+            }
+          ]
+        }
+      },
+      "processes": [
+        {
+          "id": "SNOWFLAKE_SSO_TEST",
+          "name": "Test SSO Connection",
+          "exec": {
+            "id": "snowflake_default",
+            "command": "SELECT CURRENT_TIMESTAMP() as now, CURRENT_USER() as user, CURRENT_DATABASE() as db, CURRENT_SCHEMA() as schema"
+          }
+        },
+        {
+          "id": "SNOWFLAKE_WITH_PARAMS",
+          "name": "Query with Parameters",
+          "exec": {
+            "id": "snowflake_default",
+            "command": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :schema AND TABLE_NAME LIKE :table_pattern LIMIT :limit",
+            "args": {
+              "schema": "'REPORTING_PUB'",
+              "table_pattern": "'%'",
+              "limit": "5"
+            }
+          }
+        },
+        {
+          "id": "SNOWFLAKE_FROM_FILE",
+          "name": "Execute SQL from File",
+          "exec": {
+            "id": "snowflake_default",
+            "command_file": "./sql/example_query.sql"
+          }
+        }
+      ]
+    }
+  ]
+}

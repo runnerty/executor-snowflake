@@ -1,0 +1,26 @@
+{
+  "name": "@runnerty/executor-snowflake",
+  "version": "1.0.0-mvp",
+  "description": "Runnerty module: Snowflake executor (MVP)",
+  "author": "CodertyDev",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test-simple.js"
+  },
+  "dependencies": {
+    "@runnerty/module-core": "~3.1.1",
+    "exceljs": "^4.4.0",
+    "jsonstream": "^1.0.3",
+    "snowflake-sdk": "^1.9.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0",
+    "prettier": "^2.7.1"
+  },
+  "keywords": [
+    "runnerty",
+    "executor",
+    "snowflake"
+  ]
+}
