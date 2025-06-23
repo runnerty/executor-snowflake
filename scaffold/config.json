@@ -3,13 +3,13 @@
     {
       "id": "snowflake_default",
       "type": "@runnerty-executor-snowflake",
-      "account": "myaccount.us-east-1",
-      "username": "snowflakeuser",
-      "password": "snowflakepass",
-      "database": "MYDATABASE",
-      "schema": "PUBLIC",
-      "warehouse": "COMPUTE_WH",
-      "role": "PUBLIC"
+      "account": "@ENV(SNOWFLAKE_ACCOUNT)",
+      "username": "@ENV(SNOWFLAKE_USERNAME)",
+      "password": "@ENV(SNOWFLAKE_PASSWORD)",
+      "database": "@ENV(SNOWFLAKE_DATABASE)",
+      "schema": "@ENV(SNOWFLAKE_SCHEMA)",
+      "warehouse": "@ENV(SNOWFLAKE_WAREHOUSE)",
+      "role": "@ENV(SNOWFLAKE_ROLE)"
     }
   ]
 }

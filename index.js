@@ -53,12 +53,9 @@ class snowflakeExecutor extends Executor {
 
   async createConnection(params) {
     try {
-      console.log('🔑 Getting OAuth token...');
       const token = await getToken(params);
 
       const connectionOptions = this.getConnectionOptions(params, token);
-
-      console.log('🔗 Connecting to Snowflake with OAuth token...');
 
       return new Promise((resolve, reject) => {
         const connection = snowflake.createConnection(connectionOptions);
@@ -68,7 +65,6 @@ class snowflakeExecutor extends Executor {
           if (err) {
             reject(new Error(`Snowflake connection error: ${err.message}`));
           } else {
-            console.log(`✅ Successfully connected to Snowflake. Connection ID: ${conn.getId()}`);
             resolve(conn);
           }
         });
@@ -95,8 +91,6 @@ class snowflakeExecutor extends Executor {
 
   async executeQuery(connection, query) {
     return new Promise((resolve, reject) => {
-      console.log('🔍 Executing query:', query.substring(0, 100) + (query.length > 100 ? '...' : ''));
-
       connection.execute({
         sqlText: query,
         streamResult: true,
@@ -120,7 +114,6 @@ class snowflakeExecutor extends Executor {
             });
 
             stream.on('end', () => {
-              console.log(`📊 Query completed. Rows: ${rowCounter}`);
               this.prepareEndOptions(firstRow, rowCounter, results);
               this._end(this.endOptions);
               connection.destroy();
@@ -132,7 +125,6 @@ class snowflakeExecutor extends Executor {
             });
           } else {
             // Fallback sin streaming
-            console.log(`📊 Query completed. Rows: ${rows ? rows.length : 0}`);
             this.prepareEndOptions(rows[0], rows ? rows.length : 0, rows);
             this._end(this.endOptions);
             connection.destroy();
@@ -200,8 +192,6 @@ class snowflakeExecutor extends Executor {
       });
 
       return new Promise((resolve, reject) => {
-        console.log('🔍 Executing query for JSON export:', query.substring(0, 100) + (query.length > 100 ? '...' : ''));
-
         connection.execute({
           sqlText: query,
           streamResult: true,
@@ -227,7 +217,6 @@ class snowflakeExecutor extends Executor {
               });
 
               stream.on('end', () => {
-                console.log(`📊 JSON export completed. Rows: ${rowCounter}`);
                 this.prepareEndOptions(firstRow, rowCounter);
                 this._end(this.endOptions);
                 connection.destroy();
@@ -243,7 +232,6 @@ class snowflakeExecutor extends Executor {
               stream.pipe(JSONStream.stringify()).pipe(fileStreamWriter);
             } else {
               // Fallback sin streaming - escribir directamente los rows
-              console.log(`📊 JSON export completed. Rows: ${rows ? rows.length : 0}`);
               fileStreamWriter.write(JSON.stringify(rows, null, 2));
               fileStreamWriter.end();
 
@@ -287,8 +275,6 @@ class snowflakeExecutor extends Executor {
       });
 
       return new Promise((resolve, reject) => {
-        console.log('🔍 Executing query for XLSX export:', query.substring(0, 100) + (query.length > 100 ? '...' : ''));
-
         connection.execute({
           sqlText: query,
           streamResult: true,
@@ -318,7 +304,6 @@ class snowflakeExecutor extends Executor {
               stream.on('end', async () => {
                 try {
                   await workbook.commit();
-                  console.log(`📊 XLSX export completed. Rows: ${rowCounter}`);
                   this.prepareEndOptions(firstRow, rowCounter);
                   this._end(this.endOptions);
                   connection.destroy();
@@ -346,7 +331,6 @@ class snowflakeExecutor extends Executor {
                 workbook
                   .commit()
                   .then(() => {
-                    console.log(`📊 XLSX export completed. Rows: ${rows ? rows.length : 0}`);
                     this.prepareEndOptions(rows[0], rows ? rows.length : 0);
                     this._end(this.endOptions);
                     connection.destroy();
@@ -388,8 +372,6 @@ class snowflakeExecutor extends Executor {
       });
 
       return new Promise((resolve, reject) => {
-        console.log('🔍 Executing query for CSV export:', query.substring(0, 100) + (query.length > 100 ? '...' : ''));
-
         connection.execute({
           sqlText: query,
           streamResult: true,
@@ -415,7 +397,6 @@ class snowflakeExecutor extends Executor {
               });
 
               stream.on('end', () => {
-                console.log(`📊 CSV export completed. Rows: ${rowCounter}`);
                 this.prepareEndOptions(firstRow, rowCounter);
                 this._end(this.endOptions);
                 connection.destroy();
@@ -440,7 +421,6 @@ class snowflakeExecutor extends Executor {
                 csvStream.end();
 
                 csvStream.on('finish', () => {
-                  console.log(`📊 CSV export completed. Rows: ${rows ? rows.length : 0}`);
                   this.prepareEndOptions(rows[0], rows ? rows.length : 0);
                   this._end(this.endOptions);
                   connection.destroy();

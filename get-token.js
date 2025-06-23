@@ -18,12 +18,7 @@ async function getToken(params) {
     password: params.password
   });
 
-  console.log('📝 Username:', params.user);
-  console.log('📝 URL:', url);
-  console.log('📝 Body:', body);
-
   try {
-    console.log('🔑 Requesting OAuth token...');
     const response = await axios({
       method: 'post',
       url: url,
@@ -32,13 +27,10 @@ async function getToken(params) {
     });
 
     const token = response.data?.token;
-    console.log('🔑 Response:', response.data);
 
     if (!token) {
       throw new Error('Token not found in response');
     }
-
-    console.log('✅ Token obtained successfully');
 
     return token;
   } catch (error) {
