@@ -45,7 +45,13 @@ class snowflakeExecutor extends Executor {
 
       // Crear conexión y ejecutar consulta
       const connection = await this.createConnection(params);
-      await this.executeQuery(connection, query);
+
+      // Verificar parámetros de exportación y ejecutar el método correspondiente
+      if (params.fileExport) await this.queryToJSON(connection, query, params);
+      if (params.jsonFileExport) await this.queryToJSON(connection, query, params);
+      else if (params.xlsxFileExport) await this.queryToXLSX(connection, query, params);
+      else if (params.csvFileExport) await this.queryToCSV(connection, query, params);
+      else await this.executeQuery(connection, query);
     } catch (error) {
       this.error(error);
     }
