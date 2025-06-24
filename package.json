@@ -1,8 +1,8 @@
 {
   "name": "@runnerty/executor-snowflake",
-  "version": "1.0.0",
-  "description": "Runnerty module: Snowflake executor (MVP)",
-  "author": "CodertyDev",
+  "version": "1.0.1",
+  "description": "Runnerty module: Snowflake executor",
+  "author": "Coderty",
   "license": "MIT",
   "main": "index.js",
   "scripts": {
