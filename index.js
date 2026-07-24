@@ -59,21 +59,30 @@ class snowflakeExecutor extends Executor {
 
   async createConnection(params) {
     try {
-      const token = await getToken(params);
+      const useExternalBrowser = (params.authenticator || '').toLowerCase() === 'externalbrowser';
+
+      // The external browser (SSO) flow does not use the OAuth token endpoint
+      const token = useExternalBrowser ? null : await getToken(params);
 
       const connectionOptions = this.getConnectionOptions(params, token);
 
       return new Promise((resolve, reject) => {
         const connection = snowflake.createConnection(connectionOptions);
 
-        // Usar connect normal con token OAuth
-        connection.connect((err, conn) => {
+        const connectCallback = (err, conn) => {
           if (err) {
             reject(new Error(`Snowflake connection error: ${err.message}`));
           } else {
             resolve(conn);
           }
-        });
+        };
+
+        // External browser (SSO) authentication is asynchronous: it must use connectAsync
+        if (useExternalBrowser) {
+          connection.connectAsync(connectCallback);
+        } else {
+          connection.connect(connectCallback);
+        }
       });
     } catch (error) {
       throw new Error(`Failed to get token or connect: ${error.message}`);
@@ -81,11 +90,9 @@ class snowflakeExecutor extends Executor {
   }
 
   getConnectionOptions(params, token) {
-    return {
+    const options = {
       account: params.account,
       username: params.user,
-      authenticator: 'oauth', // Especificar que usamos OAuth
-      token: token, // Token OAuth obtenido de la API
       database: params.database,
       schema: params.schema,
       warehouse: params.warehouse,
@@ -93,6 +100,21 @@ class snowflakeExecutor extends Executor {
       timeout: params.timeout || 60000,
       application: params.application || 'runnerty'
     };
+
+    if ((params.authenticator || '').toLowerCase() === 'externalbrowser') {
+      // Browser-based SSO (opens the default browser to authenticate against the IdP).
+      // clientStoreTemporaryCredential caches the token so the browser is opened only
+      // once and reused across processes.
+      options.authenticator = 'EXTERNALBROWSER';
+      if (params.host) options.host = params.host;
+      options.clientStoreTemporaryCredential = params.clientStoreTemporaryCredential !== false;
+      if (params.browserActionTimeout) options.browserActionTimeout = params.browserActionTimeout;
+    } else {
+      options.authenticator = 'oauth'; // OAuth token obtained from the token endpoint
+      options.token = token;
+    }
+
+    return options;
   }
 
   async executeQuery(connection, query) {

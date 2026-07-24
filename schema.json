@@ -59,6 +59,36 @@
         },
         "encoding": {
           "type": "string"
+        },
+        "account": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "warehouse": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "application": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "number"
+        },
+        "authenticator": {
+          "type": "string"
+        },
+        "browserActionTimeout": {
+          "type": "number"
+        },
+        "clientStoreTemporaryCredential": {
+          "type": "boolean"
         }
       }
     },
