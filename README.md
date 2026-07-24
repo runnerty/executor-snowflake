@@ -76,18 +76,43 @@ export SNOWFLAKE_PASSWORD="mypassword"
 }
 ```
 
+#### External Browser (SSO) Authentication:
+
+Set `authenticator` to `externalbrowser` to authenticate through your identity provider (Okta, Azure AD, etc.) using the default browser, the same way tools like DataGrip do. This is useful for local development against accounts that are only reachable through federated SSO. The browser is opened once and, when `clientStoreTemporaryCredential` is enabled (default), the token is cached so subsequent connections reuse it without prompting again.
+
+> Note: external browser authentication is interactive and therefore intended for local/interactive usage, not for headless/scheduled execution.
+
+```json
+{
+  "id": "snowflake_default",
+  "type": "@runnerty-executor-snowflake",
+  "account": "@ENV(SNOWFLAKE_ACCOUNT)",
+  "user": "@ENV(SNOWFLAKE_USERNAME)",
+  "host": "@ENV(SNOWFLAKE_HOST)",
+  "database": "@ENV(SNOWFLAKE_DATABASE)",
+  "schema": "@ENV(SNOWFLAKE_SCHEMA)",
+  "warehouse": "@ENV(SNOWFLAKE_WAREHOUSE)",
+  "role": "@ENV(SNOWFLAKE_ROLE)",
+  "authenticator": "externalbrowser"
+}
+```
+
 #### Configuration params:
 
-| Parameter   | Description                                                     |
-| :---------- | :-------------------------------------------------------------- |
-| account     | Snowflake account identifier (e.g., "myaccount.us-east-1")      |
-| username    | The Snowflake user to authenticate as.                          |
-| database    | Name of the database to use for this connection. (Optional)     |
-| schema      | Name of the schema to use for this connection. (Optional)       |
-| warehouse   | Name of the warehouse to use for this connection. (Optional)    |
-| role        | Name of the role to use for this connection. (Optional)         |
-| timeout     | Connection timeout in milliseconds. (Default: 60000)            |
-| application | Application name for connection tracking. (Default: "runnerty") |
+| Parameter                      | Description                                                                                                   |
+| :----------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| account                        | Snowflake account identifier (e.g., "myaccount.us-east-1")                                                    |
+| user                           | The Snowflake user to authenticate as.                                                                        |
+| host                           | Snowflake host name. (Optional)                                                                               |
+| database                       | Name of the database to use for this connection. (Optional)                                                  |
+| schema                         | Name of the schema to use for this connection. (Optional)                                                    |
+| warehouse                      | Name of the warehouse to use for this connection. (Optional)                                                 |
+| role                           | Name of the role to use for this connection. (Optional)                                                      |
+| authenticator                  | Authentication method. Set to `externalbrowser` for browser-based SSO. (Default: OAuth token authentication) |
+| clientStoreTemporaryCredential | Cache the SSO token so the browser opens only once. Only applies to `externalbrowser`. (Default: true)       |
+| browserActionTimeout           | Time in milliseconds to wait for the browser SSO action. Only applies to `externalbrowser`. (Optional)       |
+| timeout                        | Connection timeout in milliseconds. (Default: 60000)                                                         |
+| application                    | Application name for connection tracking. (Default: "runnerty")                                              |
 
 ### Plan samples:
 
@@ -259,6 +284,7 @@ This executor requires OAuth authentication setup. Make sure you have:
 ### Features:
 
 - ✅ **OAuth Authentication** - Secure token-based authentication
+- ✅ **External Browser (SSO)** - Browser-based federated authentication (Okta, Azure AD, ...)
 - ✅ **Streaming Support** - Efficient processing of large datasets
 - ✅ **Multiple Export Formats** - XLSX, CSV, JSON
 - ✅ **Parameterized Queries** - Support for `:parameter` placeholders
