@@ -80,6 +80,12 @@ export SNOWFLAKE_PASSWORD="mypassword"
 
 Set `authenticator` to `externalbrowser` to authenticate through your identity provider (Okta, Azure AD, etc.) using the default browser, the same way tools like DataGrip do. This is useful for local development against accounts that are only reachable through federated SSO. The browser is opened once and, when `clientStoreTemporaryCredential` is enabled (default), the token is cached so subsequent connections reuse it without prompting again.
 
+When the cached ID token expires, the executor removes it and automatically starts a new browser authentication. If several processes are running in parallel only the first one authenticates: the rest wait for it and reuse the new token, so a single browser window is opened. A warning is logged in the Runnerty output:
+
+```
+warn: execute-snowflake: The cached SSO ID token has expired. Removed it and re-authenticating through the browser...
+```
+
 > Note: external browser authentication is interactive and therefore intended for local/interactive usage, not for headless/scheduled execution.
 
 ```json

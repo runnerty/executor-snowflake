@@ -11,6 +11,15 @@ const { getToken } = require('./get-token');
 
 const Executor = require('@runnerty/module-core').Executor;
 
+// Snowflake GS error code returned when the cached ID token is expired or invalid
+const ID_TOKEN_INVALID_CODE = '390195';
+
+// Shared between all the processes of a Runnerty execution: when the cached ID token
+// expires every process fails at once, and each one of them would open its own browser
+// authentication. Only the first one authenticates, the rest wait for it and then reuse
+// the newly cached token.
+let pendingReauthentication = null;
+
 class snowflakeExecutor extends Executor {
   constructor(process) {
     super(process);
@@ -58,34 +67,120 @@ class snowflakeExecutor extends Executor {
   }
 
   async createConnection(params) {
-    try {
-      const useExternalBrowser = (params.authenticator || '').toLowerCase() === 'externalbrowser';
+    const useExternalBrowser = (params.authenticator || '').toLowerCase() === 'externalbrowser';
 
+    let token = null;
+    if (!useExternalBrowser) {
       // The external browser (SSO) flow does not use the OAuth token endpoint
-      const token = useExternalBrowser ? null : await getToken(params);
+      try {
+        token = await getToken(params);
+      } catch (error) {
+        throw new Error(`Failed to get token or connect: ${error.message}`);
+      }
+    }
 
-      const connectionOptions = this.getConnectionOptions(params, token);
+    const connectionOptions = this.getConnectionOptions(params, token);
 
-      return new Promise((resolve, reject) => {
-        const connection = snowflake.createConnection(connectionOptions);
-
-        const connectCallback = (err, conn) => {
-          if (err) {
-            reject(new Error(`Snowflake connection error: ${err.message}`));
-          } else {
-            resolve(conn);
-          }
-        };
-
-        // External browser (SSO) authentication is asynchronous: it must use connectAsync
-        if (useExternalBrowser) {
-          connection.connectAsync(connectCallback);
-        } else {
-          connection.connect(connectCallback);
-        }
-      });
+    try {
+      return await this.connect(connectionOptions, useExternalBrowser);
     } catch (error) {
-      throw new Error(`Failed to get token or connect: ${error.message}`);
+      // With external browser auth the ID token is cached to avoid opening the browser on
+      // every connection. Once it expires the driver keeps sending it instead of starting a
+      // new authentication, so every process fails. Drop the cached token and authenticate
+      // again through the browser.
+      if (!useExternalBrowser || !this.isInvalidIdTokenError(error)) throw error;
+
+      // Another process is already re-authenticating: wait for it and reuse its token
+      // instead of opening a second browser.
+      if (pendingReauthentication) {
+        await pendingReauthentication;
+        return this.connect(connectionOptions, useExternalBrowser);
+      }
+
+      if (!(await this.removeCachedIdToken(connectionOptions))) throw error;
+
+      this.warn('The cached SSO ID token has expired. Removed it and re-authenticating through the browser...');
+
+      pendingReauthentication = this.connect(connectionOptions, useExternalBrowser);
+      try {
+        return await pendingReauthentication;
+      } catch (reauthError) {
+        // Let a later attempt start a new authentication
+        pendingReauthentication = null;
+        throw reauthError;
+      }
+    }
+  }
+
+  connect(connectionOptions, useExternalBrowser) {
+    return new Promise((resolve, reject) => {
+      const connection = snowflake.createConnection(connectionOptions);
+
+      const connectCallback = (err, conn) => {
+        if (err) {
+          const error = new Error(`Snowflake connection error: ${err.message}`);
+          // Keep the original error so the caller can identify an expired ID token
+          error.code = err.code;
+          error.cause = err;
+          reject(error);
+        } else {
+          resolve(conn);
+        }
+      };
+
+      // External browser (SSO) authentication is asynchronous: it must use connectAsync
+      if (useExternalBrowser) {
+        connection.connectAsync(connectCallback);
+      } else {
+        connection.connect(connectCallback);
+      }
+    });
+  }
+
+  isInvalidIdTokenError(error) {
+    if (!error) return false;
+    if (String(error.code) === ID_TOKEN_INVALID_CODE) return true;
+    return /id[ _]token is invalid|id_token_invalid/i.test(String(error.message || ''));
+  }
+
+  async removeCachedIdToken(connectionOptions) {
+    try {
+      // Required lazily: these are snowflake-sdk internals and should never prevent the
+      // executor from loading if they move in a future version of the driver.
+      const GlobalConfig = require('snowflake-sdk/lib/global_config');
+      const SnowflakeUtil = require('snowflake-sdk/lib/util');
+      const AuthenticationTypes = require('snowflake-sdk/lib/authentication/authentication_types');
+      const JsonCredentialManager = require('snowflake-sdk/lib/authentication/secure_storage/json_credential_manager');
+
+      // The driver resolves the final host while building the connection, so connectionOptions
+      // already holds the same host used to build the credential cache key.
+      const key = SnowflakeUtil.buildCredentialCacheKey(
+        connectionOptions.host,
+        connectionOptions.username,
+        AuthenticationTypes.ID_TOKEN_AUTHENTICATOR
+      );
+      if (!key) return false;
+
+      let credentialManager = GlobalConfig.getCredentialManager();
+      if (!credentialManager) {
+        credentialManager = new JsonCredentialManager();
+        GlobalConfig.setCustomCredentialManager(credentialManager);
+      }
+
+      await credentialManager.remove(key);
+      return true;
+    } catch (err) {
+      this.warn(`Could not remove the cached SSO ID token: ${err.message}`);
+      return false;
+    }
+  }
+
+  warn(message) {
+    const text = `execute-snowflake: ${message}`;
+    if (this.logger && typeof this.logger.log === 'function') {
+      this.logger.log('warn', text);
+    } else {
+      console.warn(`⚠️  ${text}`);
     }
   }
 
